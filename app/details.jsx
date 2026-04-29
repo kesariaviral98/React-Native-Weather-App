@@ -1,11 +1,22 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import config from '../config';
 
 const Details = ({ route }) => {
-  const { city, country, temp, feels_like, humidity, condition, description, wind } = route.params;
+  const { city, country, temp, feels_like, humidity, condition, description, wind, icon } = route.params;
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.container}
+    >
       <Text style={styles.city}>{city}, {country}</Text>
+
+      <Image
+        source={{ uri: `${config.api.iconUrl}/${icon}@4x.png` }}
+        resizeMode="contain"
+        style={styles.weatherIcon}
+      />
+
       <Text style={styles.temp}>{temp}°C</Text>
       <Text style={styles.condition}>{condition}</Text>
       <Text style={styles.description}>{description}</Text>
@@ -24,16 +35,19 @@ const Details = ({ route }) => {
           <Text style={styles.value}>{wind} m/s</Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 export default Details;
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+  },
+  container: {
+    flexGrow: 1,
     padding: 24,
     alignItems: 'center',
     paddingTop: 40,
@@ -42,6 +56,10 @@ const styles = StyleSheet.create({
     color: '#aaaaaa',
     fontSize: 20,
     marginBottom: 8,
+  },
+  weatherIcon: {
+    width: 150,
+    height: 150,
   },
   temp: {
     color: '#ffffff',
