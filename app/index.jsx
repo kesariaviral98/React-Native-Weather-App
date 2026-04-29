@@ -8,7 +8,7 @@ const Index = ({ navigation }) => {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [history, setHistory] = useState([]);  // 👈 new
+  const [history, setHistory] = useState([]);  
 
   // Load history when app starts
   useEffect(() => {
