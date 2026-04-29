@@ -1,0 +1,234 @@
+import { Text, View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+
+const Index = ({ navigation }) => {
+  const [city, setCity] = useState('');
+  const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSearch = async () => {
+    if (!city.trim()) {
+      setError('Please enter a city name');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    setWeather(null);
+
+    // Temporary fake data - replace with real API call once key activates
+    setTimeout(() => {
+      setLoading(false);
+      setWeather({
+        temp: 28,
+        feels_like: 30,
+        humidity: 65,
+        condition: 'Clear',
+        description: 'clear sky',
+        wind: 3.5,
+        city: city,
+        country: 'IN',
+      });
+    }, 1000);
+  };
+
+  return (
+    <View style={styles.container}>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>🌤️ Weather App</Text>
+        <Text style={styles.subtitle}>Find weather for any city</Text>
+      </View>
+
+      {/* Search Section */}
+      <View style={styles.searchSection}>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter city name..."
+          placeholderTextColor="#888888"
+          value={city}
+          onChangeText={setCity}
+        />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleSearch}
+        >
+          <Text style={styles.buttonText}>Search</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Error */}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {/* Loading */}
+      {loading && (
+        <ActivityIndicator
+          size="large"
+          color="#e94560"
+          style={{ marginTop: 30 }}
+        />
+      )}
+
+      {/* Weather Card */}
+      {weather && !loading && (
+        <View style={styles.weatherCard}>
+          <Text style={styles.cityName}>
+            {weather.city}, {weather.country}
+          </Text>
+          <Text style={styles.weatherTemp}>{weather.temp}°C</Text>
+          <Text style={styles.weatherCondition}>{weather.condition}</Text>
+          <Text style={styles.weatherDescription}>{weather.description}</Text>
+
+          {/* Extra Details */}
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Feels like</Text>
+              <Text style={styles.detailValue}>{weather.feels_like}°C</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Humidity</Text>
+              <Text style={styles.detailValue}>{weather.humidity}%</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Wind</Text>
+              <Text style={styles.detailValue}>{weather.wind} m/s</Text>
+            </View>
+          </View>
+
+          {/* See Details Button */}
+          <TouchableOpacity
+            style={styles.detailsButton}
+            onPress={() => navigation.navigate('Details', {
+              city: weather.city,
+              country: weather.country,
+              temp: weather.temp,
+              feels_like: weather.feels_like,
+              humidity: weather.humidity,
+              condition: weather.condition,
+              description: weather.description,
+              wind: weather.wind,
+            })}
+          >
+            <Text style={styles.detailsButtonText}>See Details →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+    </View>
+  );
+}
+
+export default Index;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+    padding: 20,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  subtitle: {
+    color: '#aaaaaa',
+    fontSize: 16,
+    marginTop: 8,
+  },
+  searchSection: {
+    gap: 12,
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    padding: 14,
+    borderRadius: 10,
+    fontSize: 16,
+    color: '#000000',
+  },
+  button: {
+    backgroundColor: '#e94560',
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  error: {
+    color: '#ff6b6b',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  weatherCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 30,
+    gap: 8,
+  },
+  cityName: {
+    color: '#aaaaaa',
+    fontSize: 18,
+  },
+  weatherTemp: {
+    color: '#ffffff',
+    fontSize: 72,
+    fontWeight: 'bold',
+  },
+  weatherCondition: {
+    color: '#e94560',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  weatherDescription: {
+    color: '#aaaaaa',
+    fontSize: 16,
+    textTransform: 'capitalize',
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#ffffff20',
+  },
+  detailItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  detailLabel: {
+    color: '#aaaaaa',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  detailValue: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  detailsButton: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#e94560',
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    borderRadius: 20,
+  },
+  detailsButtonText: {
+    color: '#e94560',
+    fontWeight: 'bold',
+  },
+});
