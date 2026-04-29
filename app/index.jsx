@@ -1,5 +1,6 @@
 import { Text, View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
+import config from '../config';
 
 const Index = ({ navigation }) => {
   const [city, setCity] = useState('');
@@ -17,20 +18,33 @@ const Index = ({ navigation }) => {
     setLoading(true);
     setWeather(null);
 
-    // Temporary fake data - replace with real API call once key activates
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await fetch(
+        `${config.api.baseUrl}/weather?q=${city}&appid=${config.api.key}&units=${config.defaults.units}`
+      );
+      const data = await response.json();
+
+      if (data.cod !== 200) {
+        setError('City not found. Please try again.');
+        return;
+      }
+
       setWeather({
-        temp: 28,
-        feels_like: 30,
-        humidity: 65,
-        condition: 'Clear',
-        description: 'clear sky',
-        wind: 3.5,
-        city: city,
-        country: 'IN',
+        temp: Math.round(data.main.temp),
+        feels_like: Math.round(data.main.feels_like),
+        humidity: data.main.humidity,
+        condition: data.weather[0].main,
+        description: data.weather[0].description,
+        wind: data.wind.speed,
+        city: data.name,
+        country: data.sys.country,
       });
-    }, 1000);
+
+    } catch (err) {
+      setError('Something went wrong. Check your connection.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
