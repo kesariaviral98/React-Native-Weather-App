@@ -11,6 +11,10 @@ const config = {
   defaults: {
     units: 'metric',
     language: 'en',
+    maxHistoryItems: 5,
+  },
+  storage: {
+    historyKey: 'search_history',
   },
 };
 

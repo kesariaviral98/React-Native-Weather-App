@@ -1,5 +1,6 @@
 import { Text, View, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Image, ScrollView } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import config from '../config';
 
 const Index = ({ navigation }) => {
@@ -7,9 +8,50 @@ const Index = ({ navigation }) => {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [history, setHistory] = useState([]);  // 👈 new
 
-  const handleSearch = async () => {
-    if (!city.trim()) {
+  // Load history when app starts
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(config.storage.historyKey);
+      if (stored) {
+        setHistory(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.log('Error loading history:', err);
+    }
+  };
+
+  const saveToHistory = async (cityName) => {
+    try {
+      // Remove duplicate if exists, add to front
+      const updated = [
+        cityName,
+        ...history.filter(c => c.toLowerCase() !== cityName.toLowerCase())
+      ].slice(0, config.defaults.maxHistoryItems); // keep only last 5
+
+      setHistory(updated);
+      await AsyncStorage.setItem(config.storage.historyKey, JSON.stringify(updated));
+    } catch (err) {
+      console.log('Error saving history:', err);
+    }
+  };
+
+  const clearHistory = async () => {
+    try {
+      await AsyncStorage.removeItem(config.storage.historyKey);
+      setHistory([]);
+    } catch (err) {
+      console.log('Error clearing history:', err);
+    }
+  };
+
+  const handleSearch = async (searchCity = city) => {
+    if (!searchCity.trim()) {
       setError('Please enter a city name');
       return;
     }
@@ -20,7 +62,7 @@ const Index = ({ navigation }) => {
 
     try {
       const response = await fetch(
-        `${config.api.baseUrl}/weather?q=${city}&appid=${config.api.key}&units=${config.defaults.units}`
+        `${config.api.baseUrl}/weather?q=${searchCity}&appid=${config.api.key}&units=${config.defaults.units}`
       );
       const data = await response.json();
 
@@ -29,7 +71,7 @@ const Index = ({ navigation }) => {
         return;
       }
 
-      setWeather({
+      const weatherData = {
         temp: Math.round(data.main.temp),
         feels_like: Math.round(data.main.feels_like),
         humidity: data.main.humidity,
@@ -39,13 +81,21 @@ const Index = ({ navigation }) => {
         city: data.name,
         country: data.sys.country,
         icon: data.weather[0].icon,
-      });
+      };
 
-    } catch (err) {
+      setWeather(weatherData);
+      await saveToHistory(data.name); // save successful search
+
+    } catch (_err) {
       setError('Something went wrong. Check your connection.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleHistoryPress = (cityName) => {
+    setCity(cityName);
+    handleSearch(cityName);
   };
 
   return (
@@ -72,11 +122,35 @@ const Index = ({ navigation }) => {
         />
         <TouchableOpacity
           style={styles.button}
-          onPress={handleSearch}
+          onPress={() => handleSearch()}
         >
           <Text style={styles.buttonText}>Search</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Search History */}
+      {history.length > 0 && !weather && !loading && (
+        <View style={styles.historySection}>
+          <View style={styles.historyHeader}>
+            <Text style={styles.historyTitle}>Recent Searches</Text>
+            <TouchableOpacity onPress={clearHistory}>
+              <Text style={styles.clearText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+
+          {history.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.historyItem}
+              onPress={() => handleHistoryPress(item)}
+            >
+              <Text style={styles.historyIcon}>🕐</Text>
+              <Text style={styles.historyText}>{item}</Text>
+              <Text style={styles.historyArrow}>→</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* Error */}
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -123,23 +197,35 @@ const Index = ({ navigation }) => {
             </View>
           </View>
 
-          {/* See Details Button */}
-          <TouchableOpacity
-            style={styles.detailsButton}
-            onPress={() => navigation.navigate('Details', {
-              city: weather.city,
-              country: weather.country,
-              temp: weather.temp,
-              feels_like: weather.feels_like,
-              humidity: weather.humidity,
-              condition: weather.condition,
-              description: weather.description,
-              wind: weather.wind,
-              icon: weather.icon,
-            })}
-          >
-            <Text style={styles.detailsButtonText}>See Details →</Text>
-          </TouchableOpacity>
+          {/* Buttons Row */}
+          <View style={styles.buttonsRow}>
+            <TouchableOpacity
+              style={styles.detailsButton}
+              onPress={() => navigation.navigate('Details', {
+                city: weather.city,
+                country: weather.country,
+                temp: weather.temp,
+                feels_like: weather.feels_like,
+                humidity: weather.humidity,
+                condition: weather.condition,
+                description: weather.description,
+                wind: weather.wind,
+                icon: weather.icon,
+              })}
+            >
+              <Text style={styles.detailsButtonText}>See Details →</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.newSearchButton}
+              onPress={() => {
+                setWeather(null);
+                setCity('');
+              }}
+            >
+              <Text style={styles.newSearchButtonText}>New Search</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -192,6 +278,45 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontWeight: 'bold',
+    fontSize: 16,
+  },
+  historySection: {
+    marginTop: 24,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  historyTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  clearText: {
+    color: '#e94560',
+    fontSize: 14,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16213e',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  historyIcon: {
+    fontSize: 16,
+    marginRight: 12,
+  },
+  historyText: {
+    color: '#ffffff',
+    fontSize: 16,
+    flex: 1,
+  },
+  historyArrow: {
+    color: '#aaaaaa',
     fontSize: 16,
   },
   error: {
@@ -253,16 +378,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  detailsButton: {
+  buttonsRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 16,
+  },
+  detailsButton: {
     borderWidth: 1,
     borderColor: '#e94560',
     paddingVertical: 10,
-    paddingHorizontal: 30,
+    paddingHorizontal: 20,
     borderRadius: 20,
   },
   detailsButtonText: {
     color: '#e94560',
+    fontWeight: 'bold',
+  },
+  newSearchButton: {
+    borderWidth: 1,
+    borderColor: '#aaaaaa',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  newSearchButtonText: {
+    color: '#aaaaaa',
     fontWeight: 'bold',
   },
 });
